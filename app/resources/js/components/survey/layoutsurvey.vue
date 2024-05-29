@@ -3,7 +3,7 @@ import { onMounted, reactive } from 'vue';
 import container from '../../crafted/survey/container.vue'
 import preview from './preview.vue'
 import axios from 'axios'
-import swal from 'sweetalert';
+import Swal from 'sweetalert2'
 let initialState = {
     form_id: null,
     componentCollection: [],
@@ -65,41 +65,26 @@ function formSave() {
     }
 
     formData.append('collection', JSON.stringify(form.formSectionCollection))
-    swal("","Do you want to publish survey form?", "info", {
-        className: "boxstyle",
 
-        buttons: {
-            New: {
-                text: "Save as draft",
-                value: false,
-                visible: true,
-            },
-
-            New2: {
-                text: " Publish",
-                value: true,
-                visible: true,
-            },
-            cancel: true,
-        },
-    }).then((result) => {
-        if (result || !result) {
-            formData.append('status', result)
-            if (form.survey.sections.length > 0) {
-                formData.append("_method", "PATCH");
-                axios.post('/survey-form-update', formData).then(function (response) {
-                    console.log(response)
-                    // window.location.href = response.data.redirect
-                })
-            }
-            else {
-                axios.post('/survey-form-store', formData).then(function (response) {
-                    console.log(response)
-                    // window.location.href = response.data.redirect
-                })
-            }
-        }
-    });
+    if (form.survey.sections.length > 0) {
+        formData.append("_method", "PATCH");
+        axios.post('/survey-form-update', formData).then(function (response) {
+            Swal.fire({
+                title: "Success",
+                text: "Successfully saved!",
+                icon: "success"
+            }).then(window.location.href = response.data.redirect)
+        })
+    }
+    else {
+        axios.post('/survey-form-store', formData).then(function (response) {
+            Swal.fire({
+                title: "Success",
+                text: "Successfully saved!",
+                icon: "success"
+            }).then(window.location.href = response.data.redirect)
+        })
+    }
 
 }
 onMounted(() => {
@@ -157,5 +142,9 @@ div[placeholder]:empty:before {
 
 .btn-remove:hover {
     color: red;
+}
+
+.swal2-icon-show {
+    margin-left: 40% !important;
 }
 </style>

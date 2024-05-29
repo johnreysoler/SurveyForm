@@ -2,7 +2,7 @@
 import { onMounted, reactive } from 'vue'
 import { imageUrl, setImageSize, allowMultipleSelection, listStyleTypeLowerAlpha } from '../../composables/useSurveyForm.js'
 import axios from 'axios'
-import swal from 'sweetalert';
+import Swal from 'sweetalert2'
 const props = defineProps({
     userform: { Type: Array },
     user_id: { Type: Number }
@@ -45,10 +45,11 @@ function SubmitResponse() {
             form_id: props.userform.id,
             user_response: form.response
         }).then(function (response) {
-            swal({
-                text: "Successfully saved!",
+            Swal.fire({
+                title: "Success",
+                text: "Successfully published survey form!",
                 icon: "success"
-            }).then(window.location.reload())
+            }).then(window.location.reload());
         })
     }
 
@@ -148,7 +149,8 @@ onMounted(() => {
         <h2 class="text-center">{{ props.userform ? props.userform.title : null }}</h2>
         <div v-if="form.userForm.length > 0" class="mt-5">
             <ul id="preview" style="height:83vh;overflow-y:scroll">
-                <li v-for="(content, index) in form.userForm" :key="index" :class="Validatesection(content)" :id="'section' + content.id">
+                <li v-for="(content, index) in form.userForm" :key="index" :class="Validatesection(content)"
+                    :id="'section' + content.id">
                     <div class="row w-100">
                         <div class="col">
                             <div v-html="content.html" class="ms-3"></div>
@@ -240,5 +242,9 @@ onMounted(() => {
 
 #preview li:not(.section):before {
     content: counter(counter) ".";
+}
+
+.swal2-icon-show {
+    margin-left: 40% !important;
 }
 </style>

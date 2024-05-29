@@ -90,6 +90,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Assignment::create([
+            'name' => 'All',
+            'model' => 'App\Models\Employee',
+            'employee_function_name'=> null,
+            'reference_column'=> 'id'
+        ]);
+
+        Assignment::create([
             'name' => 'Company',
             'model' => 'App\Models\Company',
             'employee_function_name'=>'companies',

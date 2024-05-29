@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, onMounted } from 'vue'
-import { ValidateCollection,setObjectElement } from '../../../composables/useSurveyForm.js'
+import { ValidateCollection,setObjectElement,RemoveFromCollection,RemoveObject } from '../../../composables/useSurveyForm.js'
 const props = defineProps({
     component: { Type: Array },
     index: { Type: Number },
@@ -40,6 +40,11 @@ function saveDropdownOption() {
     form.close.click()
 }
 
+function RemoveDropdownOption(index, Elementid){
+    RemoveObject(Elementid)
+    form.dropdownOptionCollection = RemoveFromCollection(form.dropdownOptionCollection,index)
+    console.log(form.dropdownOptionCollection)
+}
 onMounted(() => {
     form.close = setObjectElement('btnClosedropdownModal'+props.index)
     if(props.formSection){
@@ -51,7 +56,8 @@ onMounted(() => {
             setDropdownProperties(index)
         });
     }
-    emit("DropdownOptionCollection", form.dropdownOptionCollection);
+        emit("DropdownOptionCollection", form.dropdownOptionCollection);
+    
 })
 </script>
 <template>
@@ -68,14 +74,14 @@ onMounted(() => {
                         <h1 class="modal-title fs-5" id="staticDropdwnBackdropLabel">Add dropdown option</h1>
                     </div>
                     <div class="modal-body" style="max-height: 300px;overflow-y: auto;">
-                        <div class="row" v-for="(option, index) in form.addOption" :key="index">
+                        <div class="row" v-for="(option, index) in form.addOption" :key="index" :id="'dropdown_'+index+'_'+props.index">
                             <div class="col">
                                 <input type="text" class="border-bottom inputfield border-0 outline-none p-2 w-100"
                                     @input="setDropdownProperties(index)" placeholder="Option"
                                     v-model="form.text[index]">
                             </div>
                             <div class="col-2">
-                                <button type="button"
+                                <button type="button" @click="RemoveDropdownOption(index,'dropdown_'+index+'_'+props.index)"
                                     class="btn-icon d-block me-2 btn-remove-option bg-transparent border-0"><i
                                         class="bi bi-x"></i></button>
                             </div>

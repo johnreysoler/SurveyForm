@@ -6,7 +6,8 @@ import { ValidateCollection, setObjectElement } from '../../../composables/useSu
 const props = defineProps({
     component: { Type: Array },
     index: { Type: Number },
-    formCollection: { Type: Array }
+    formCollection: { Type: Array },
+    formSection: { Type: Array },
 })
 
 const emit = defineEmits(['PrerequisiteCollection'])
@@ -39,7 +40,8 @@ function savePrerequisite() {
     }
     else {
         form.prerequisiteCollection.push({
-            id : props.component.id,
+            id: props.component.id,
+            prerequisite_id: null,
             prerequisite_form: form.prerequisiteForm,
             prerequisite_question: form.prerequisiteQuestion,
             prerequisite_option: form.prerequisiteOption,
@@ -102,6 +104,25 @@ function getprerequisiteOptionCollection() {
 }
 onMounted(() => {
     form.prerequisiteForm = props.formCollection.form_id
+    if (props.formSection) {
+        if (props.formSection.section_prerequisites.length > 0) {
+            let prerequisite = props.formSection.section_prerequisites
+            form.prerequisiteForm = prerequisite[0].prerequisite_form_id
+            form.prerequisiteQuestion = prerequisite[0].prerequisite_section_id
+            form.prerequisiteOption = prerequisite[0].answer
+            fetchPrerequisiteOption()
+            form.prerequisiteCollection.push({
+                id: props.component.id,
+                prerequisite_id: prerequisite[0].id,
+                prerequisite_form: form.prerequisiteForm,
+                prerequisite_question: form.prerequisiteQuestion,
+                prerequisite_option: form.prerequisiteOption,
+                question: props.component.id,
+                form: props.formCollection.form_id
+            })
+            emit("PrerequisiteCollection", form.prerequisiteCollection);
+        }
+    }
     fetchPrerequisiteForm()
 })
 </script>

@@ -1,7 +1,8 @@
 <script setup>
 import { onMounted, reactive } from 'vue'
 import axios from 'axios'
-import swal from 'sweetalert';
+import Swal from 'sweetalert2'
+import Multiselect from 'vue-multiselect'
 let initialState = {
     form_id: null,
     search: null,
@@ -18,7 +19,9 @@ let initialState = {
     prerequisiteForm: null,
     prerequisiteQuestion: null,
     prerequisiteOption: [],
-    errors: []
+    errors: [],
+    assign_by: 1,
+    isBUHead: false
 }
 
 let initialOptionState = {
@@ -41,14 +44,23 @@ function fetchData() {
         form.surveyForms = response.data.surveyForms
         options.prerequisiteForms = form.surveyForms.filter(o => o.status_id !== 1 && o.status_id !== 3)
         options.surveyAssignment = response.data.assignments
+        form.assign_by = response.data.assignments[0]
+        form.isBUHead = response.data.isBUHead
+        fetchAssignmentRespondent()
     })
 }
 
-function fetchAssignmentRespondent() {
-    axios.get('/assignment/' + form.assign_by).then(function (response) {
+function fetchAssignmentRespondent(survey) {
+    axios.get('/assignment/' + form.assign_by.id).then(function (response) {
         options.surveyRespondent = response.data
+        if (survey) {
+            form.surveyFormsRespondents = response.data.filter(o => survey.form_assignmets.map(repondent => repondent.respondent_id).includes(o.id));
+        }
+
     })
 }
+
+
 
 function fetchprerequisiteQuestions() {
     axios.get('/question/' + form.prerequisiteForm).then(function (response) {
@@ -64,13 +76,16 @@ function fetchPrerequisiteOption() {
 
 function formUpdate(survey) {
     form.modalTitle = 'Update Survey Form'
+    options.surveyRespondent = []
     if (survey) {
         form.title = survey.title
         form.description = survey.description
-        form.assign_by = survey.assignment_id
+        form.assign_by = survey.assignments
         form.start_date = survey.start_date
         form.end_date = survey.end_date
         form.form_id = survey.id
+        fetchAssignmentRespondent(survey)
+
         if (survey.prerequisites.length > 0) {
             form.prerequisiteForm = survey.prerequisites[0].prerequisite_form_id
             fetchprerequisiteQuestions()
@@ -79,50 +94,68 @@ function formUpdate(survey) {
             form.prerequisiteOption = survey.prerequisites[0].answer
             form.prerequisiteId = survey.prerequisites[0].id
         }
-        fetchAssignmentRespondent()
+
     }
 }
 
-function submitForm() {
+function publishSurveyForm(survey) {
+    axios.patch('/publish', {
+        form_id: survey.id
+    }).then(response => {
+        Swal.fire({
+            title: "Success",
+            text: "Successfully published survey form!",
+            icon: "success"
+        }).then(fetchData());
+    })
+}
 
+function viewSurveyForm(survey) {
+    axios.get('/form/view/' + survey.id).then(function (response) {
+        window.open(response.data.redirect + '?id=' + response.data.id);
+    })
+
+}
+function submitForm() {
     if (form.form_id !== null) {
         axios.patch('/form-update', {
-            form_id : form.form_id,
-            title : form.title,
-            description : form.description,
-            assign_by : form.assign_by,
-            start_date : form.start_date,
-            end_date : form.end_date,
-            prerequisiteForm : form.prerequisiteForm,
-            prerequisiteQuestion :form.prerequisiteQuestion,
-            prerequisiteOption : form.prerequisiteOption,
-            surveyFormsRespondents : form.surveyFormsRespondents
+            form_id: form.form_id,
+            title: form.title,
+            description: form.description,
+            assign_by: form.assign_by.id,
+            start_date: form.start_date,
+            end_date: form.end_date,
+            prerequisiteForm: form.prerequisiteForm,
+            prerequisiteQuestion: form.prerequisiteQuestion,
+            prerequisiteOption: form.prerequisiteOption,
+            respondents: form.surveyFormsRespondents.map(repondent => repondent.id)
         }).then(response => {
-            swal({
+            Swal.fire({
+                title: "Success",
                 text: "Successfully saved!",
                 icon: "success"
-            }).then(window.location.href = response.data.redirect + '?id=' + response.data.id)//
+            }).then(window.location.href = response.data.redirect + '?id=' + response.data.id);
         }).catch(error => {
             form.errors = error.response.data.errors;
         })
     }
     else {
         axios.post('/form-store', {
-            title : form.title,
-            description : form.description,
-            assign_by : form.assign_by,
-            start_date : form.start_date,
-            end_date : form.end_date,
-            prerequisiteForm : form.prerequisiteForm,
-            prerequisiteQuestion :form.prerequisiteQuestion,
-            prerequisiteOption : form.prerequisiteOption,
-            surveyFormsRespondents : form.surveyFormsRespondents
+            title: form.title,
+            description: form.description,
+            assign_by: form.assign_by.id,
+            start_date: form.start_date,
+            end_date: form.end_date,
+            prerequisiteForm: form.prerequisiteForm,
+            prerequisiteQuestion: form.prerequisiteQuestion,
+            prerequisiteOption: form.prerequisiteOption,
+            respondents: form.surveyFormsRespondents.map(repondent => repondent.id)
         }).then(response => {
-            console.log(response)
-            swal({
+            Swal.fire({
+                title: "Success",
                 text: "Successfully saved!",
                 icon: "success"
-            }).then(window.location.href = response.data.redirect + '?id=' + response.data.id)
+            }).then(window.location.href = response.data.redirect + '?id=' + response.data.id);
         }).catch(error => {
             form.errors = error.response.data.errors;
         })
@@ -166,16 +199,16 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
-            <div class="row mt-5">
+            <div class="row mt-5" style="max-height: 700px;min-height: 700px; overflow-y: scroll;">
                 <div class="col">
                     <table class="table table-hover">
-                        <thead>
+                        <thead class="sticky-top">
                             <tr>
                                 <th>id</th>
                                 <th>Title</th>
                                 <th>Description</th>
                                 <th>Status</th>
-                                <th>Assign by</th>
+                                <th>Assign To</th>
                                 <th>Start date</th>
                                 <th>End date</th>
                                 <th>Created By</th>
@@ -194,11 +227,24 @@ onMounted(() => {
                                 <td>{{ survey.end_date }}</td>
                                 <td>{{ survey.created_bys === null ? null : survey.created_bys.name }}</td>
                                 <td>{{ survey.published_bys === null ? null : survey.published_bys.name }}</td>
-                                <td><button type="button" v-if="survey.statuses.allow_update"
-                                        class="bg-transparent border-0" data-bs-toggle="modal"
-                                        data-bs-target="#IndexstaticBackdrop" @click="formUpdate(survey)">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-light btn-sm dropdown-toggle" type="button"
+                                            data-bs-toggle="dropdown" aria-expanded="false"
+                                            aria-labelledby="navbarDropdown">
+                                            Action
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#"
+                                                    v-if="survey.statuses.allow_update && !form.isBUHead"
+                                                    data-bs-toggle="modal" data-bs-target="#IndexstaticBackdrop"
+                                                    @click="formUpdate(survey)">Edit</a></li>
+                                            <li><a class="dropdown-item" href="#"
+                                                    v-if="survey.statuses.allow_update && form.isBUHead"
+                                                    @click="publishSurveyForm(survey)">Publish</a></li>
+                                            <li><a class="dropdown-item" href="#" @click="viewSurveyForm(survey)">View</a></li>
+                                        </ul>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -221,7 +267,8 @@ onMounted(() => {
                             </div>
                             <div class="col">
                                 <input type="text" class="form-control" v-model="form.title">
-                                <span v-if="form.errors['title']" class="text-danger" style="font-size: 10px;">{{ form.errors['title'][0] }}</span>
+                                <span v-if="form.errors['title']" class="text-danger" style="font-size: 10px;">{{
+                        form.errors['title'][0] }}</span>
                             </div>
                         </div>
                         <div class="row mb-2">
@@ -239,7 +286,8 @@ onMounted(() => {
                             </div>
                             <div class="col">
                                 <input type="date" class="form-control" v-model="form.start_date">
-                                <span v-if="form.errors['start_date']" class="text-danger" style="font-size: 10px;">{{ form.errors['start_date'][0] }}</span>
+                                <span v-if="form.errors['start_date']" class="text-danger" style="font-size: 10px;">{{
+                        form.errors['start_date'][0] }}</span>
                             </div>
                         </div>
 
@@ -249,32 +297,44 @@ onMounted(() => {
                             </div>
                             <div class="col">
                                 <input type="date" class="form-control" v-model="form.end_date">
-                                <span v-if="form.errors['end_date']" class="text-danger" style="font-size: 10px;">{{ form.errors['end_date'][0] }}</span>
+                                <span v-if="form.errors['end_date']" class="text-danger" style="font-size: 10px;">{{
+                        form.errors['end_date'][0] }}</span>
                             </div>
                         </div>
 
                         <div class="row mb-2">
                             <div class="col-3">
-                                <label class="mt-3">Assign By</label>
+                                <label class="mt-3">Assign To</label>
                             </div>
                             <div class="col">
-                                <select class="form-control" v-model="form.assign_by"
+                                <!-- <select class="form-control" v-model="form.assign_by"
                                     @change="fetchAssignmentRespondent()">
                                     <option v-for="(assignment, index) in options.surveyAssignment"
                                         :value="assignment.id" :key="index">{{ assignment.name }}</option>
-                                </select>
-                                <span v-if="form.errors['assign_by']" class="text-danger" style="font-size: 10px;">{{ form.errors['assign_by'][0] }}</span>
+                                </select> -->
+
+                                <multiselect v-model="form.assign_by" :multiple="false" :preselect-first="true"
+                                    @select="fetchAssignmentRespondent()" :options="options.surveyAssignment"
+                                    label="name" track-by="id"></multiselect>
+                                <span v-if="form.errors['assign_by']" class="text-danger" style="font-size: 10px;">{{
+                        form.errors['assign_by'][0] }}</span>
                             </div>
                         </div>
                         <div class="row mb-2">
                             <div class="col-3">
                                 <label class="mt-3">Respondents</label>
                             </div>
-                            <div class="col">
-                                <select class="form-control" v-model="form.surveyFormsRespondents">
+                            <div class="col-9">
+                                <!-- <select class="form-control" v-model="form.surveyFormsRespondents">
                                     <option v-for="(respondent, index) in options.surveyRespondent"
                                         :value="respondent.id" :key="index">{{ respondent.name }}</option>
-                                </select>
+                                </select> -->
+
+                                <multiselect v-model="form.surveyFormsRespondents" :multiple="true"
+                                    :preselect-first="true" :options="options.surveyRespondent" label="name"
+                                    track-by="id"></multiselect>
+                                <span v-if="form.errors['respondents']" class="text-danger" style="font-size: 10px;">{{
+                        form.errors['respondents'][0] }}</span>
                             </div>
                         </div>
                         <div class="row mb-2">
@@ -291,7 +351,7 @@ onMounted(() => {
                         </div>
                         <div class="row mb-2">
                             <div class="col-3">
-                                <label>Survey Question</label>
+                                <label class="mt-2">Survey Question</label>
                             </div>
                             <div class="col">
                                 <select class="form-control" v-model="form.prerequisiteQuestion"
@@ -323,3 +383,9 @@ onMounted(() => {
         </div>
     </div>
 </template>
+<style src="vue-multiselect/dist/vue-multiselect.css"></style>
+<style>
+.swal2-icon-show {
+    margin-left: 40% !important;
+}
+</style>

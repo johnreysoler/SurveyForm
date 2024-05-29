@@ -7,4 +7,5 @@ let app=createApp({})
 app.component('survey-index', require('./components/survey/index.vue').default);
 app.component('survey-form-layout', require('./components/survey/layoutsurvey.vue').default);
 app.component('survey-form', require('./components/survey/surveyform.vue').default);
+app.component('survey-form-view', require('./components/survey/view.vue').default);
 app.mount("#app")

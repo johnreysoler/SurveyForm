@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, onMounted } from 'vue'
-import { ValidateCollection, imageUrl, setImageSize, setObjectElement } from '../../../composables/useSurveyForm.js'
+import { ValidateCollection, imageUrl, setImageSize, setObjectElement,RemoveFromCollection,RemoveObject } from '../../../composables/useSurveyForm.js'
 import ImageModal from '../../modal/image/image.vue'
 import optionComponent from './option/option.vue'
 import textComponent from './option/text.vue'
@@ -114,6 +114,12 @@ function AddOtherOption(boolean) {
     form.addOtherOption = boolean
     setQuestionProperties()
 }
+
+function RemoveOption(index,Elementid){
+    form.optionCollection = RemoveFromCollection(form.optionCollection,index)
+    RemoveObject(Elementid);
+    setQuestionProperties()
+}
 onMounted(() => {
     form.inputfield = setObjectElement('inputfield' + props.index)
     form.surveyForm = props.formSection
@@ -198,7 +204,7 @@ onMounted(() => {
                 </div>
                 <div class="col" v-if="form.OptionTypeProperty.multiple_select">
                     <button class="btn-icon d-block me-2 btn-remove-option bg-transparent border-0"
-                        title="Remove option">
+                        title="Remove option" @click="RemoveOption(index,'option_' + index + '_' + props.component.id)">
                         <i class="bi bi-x"></i></button>
                 </div>
             </div>

@@ -12,7 +12,7 @@ const props = defineProps({
 const emit = defineEmits(['formProperties','PrerequisiteCollection'])
 
 let initialState = {
-    is_required: false,
+    is_required: true,
     is_multiple_select: false,
     remove_form_section: false
 }
@@ -51,7 +51,7 @@ onMounted(() => {
         <div class="row">
             <div class="col">
                 <div class="d-flex" v-if="props.component.component === 1">
-                    <Prerequisite :key="props.index" :component="props.component" :index="props.index" :formCollection="props.formCollection"
+                    <Prerequisite :key="props.index" :component="props.component" :index="props.index" :formCollection="props.formCollection" :formSection="props.formSection"
                     @PrerequisiteCollection="getPrerequisiteCollection"/>
                 </div>
             </div>

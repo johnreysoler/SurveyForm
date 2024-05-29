@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -13,9 +12,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Route::get('/', function () {
-//     return view('pages.login.login');
-// });
 
 Route::get('/surveyform/{user_id}', [App\Http\Controllers\ResponseController::class, 'index']);
 // Route::get('/assignment', [App\Http\Controllers\AssignmentController::class, 'index']);
@@ -31,6 +27,8 @@ Route::get('/survey-form-layout', [App\Http\Controllers\FormController::class, '
 Route::get('/survey-form-layout/{id}', [App\Http\Controllers\FormController::class, 'fetchForm']);
 Route::get('/option-type', [App\Http\Controllers\OptionTypeController::class, 'index']);
 Route::get('/form/user/{form_id}',[App\Http\Controllers\FormController::class, 'fetchForm']);
+Route::get('/form/view/{form_id}',[App\Http\Controllers\FormController::class, 'fetchViewForm']);
+Route::get('/form/view',[App\Http\Controllers\FormController::class, 'viewForm'])->name('view-survey-form');
 
 Route::post('/form-store', [App\Http\Controllers\FormController::class, 'store']);
 Route::post('/survey-form-store', [App\Http\Controllers\FormSectionController::class, 'store']);
@@ -38,4 +36,4 @@ Route::patch('/survey-form-update', [App\Http\Controllers\FormSectionController:
 Route::patch('/form-update', [App\Http\Controllers\FormController::class, 'update']);
 Route::post('/form/user/response',[App\Http\Controllers\ResponseController::class, 'store']);
 
-
+Route::patch('/publish',[App\Http\Controllers\FormController::class, 'publishForm']);

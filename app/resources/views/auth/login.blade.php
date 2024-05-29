@@ -13,7 +13,7 @@
                 <!--begin::Aside body-->
                 <div class="d-flex flex-column-fluid flex-column flex-center mt-5 mt-lg-0">
                     <a href="#" class="mb-15 text-center">
-                        <img src="css/images/logos/logo-letter-1.png" class="max-h-75px" alt="" />
+                        <img src="logo/lfuggoc_logo.png" class="max-h-75px" alt="" />
                     </a>
                     <!--begin::Signin-->
                     <div class="login-form login-signin">

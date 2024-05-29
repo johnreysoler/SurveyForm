@@ -17,6 +17,7 @@ class CreateRespondentsTable extends Migration
             $table->id();
             $table->integer('form_id');
             $table->integer('user_id');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

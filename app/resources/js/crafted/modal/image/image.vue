@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, onMounted } from 'vue'
-import { ValidateImageFileType, ValidateImageSize, imageUrl, setObjectElement } from '../../../composables/useSurveyForm.js'
+import { ValidateImageFileType, ValidateImageSize, imageUrl, setObjectElement,RemoveFromCollection,RemoveObject } from '../../../composables/useSurveyForm.js'
 
 const props = defineProps({
     component: { Type: Array },
@@ -39,7 +39,7 @@ function addImageToCollection(index, file) {
     if (index === null) {
         form.imageCollection.push({
             questionid: props.component.id,
-            id: form.id++,
+            id: index,//form.id++,
             width: null,
             height: null,
             image_id : null,
@@ -67,6 +67,10 @@ function saveImageFile() {
     form.close.click()
 }
 
+function RemoveImage(id,Elementid){
+    form.imageCollection = RemoveFromCollection(form.imageCollection,id)
+    RemoveObject(Elementid)
+}
 onMounted(() => {
     if (props.formSection) {
         props.formSection.images.forEach((item,index) => {
@@ -79,7 +83,6 @@ onMounted(() => {
                 url: item.path,
                 name: item.name
             })
-
             form.width[index] = item.width
             form.height[index] = item.height
         });
@@ -114,9 +117,9 @@ onMounted(() => {
                             </div>
                         </div>
                         <div style="width: 15rem;" v-for="(image, index) in form.imageCollection"
-                            class="mx-1 my-1 image" :id="'image' + index">
+                            class="mx-1 my-1 image" :id="'image' + index+'_'+props.index">
                             <div style="height:16rem;" class="position-relative">
-                                <button class="position-absolute bg-transparent border-0 btn-remove"><i
+                                <button class="position-absolute bg-transparent border-0 btn-remove" @click="RemoveImage(image.id,'image' + index+'_'+props.index)"><i
                                         class="bi bi-x fw-bold" style="font-size:25px"></i></button>
                                 <img :src="imageUrl(image.url)" style="height:100%;width:100%" class="rounded">
                             </div>
@@ -132,7 +135,7 @@ onMounted(() => {
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :show="false"
                             :id="'btn_close_image_modal' + props.index">Cancel</button>
                         <button type="button" class="btn btn-primary" @click="saveImageFile()">Add</button>
                     </div>

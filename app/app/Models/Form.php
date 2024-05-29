@@ -10,6 +10,7 @@ use App\Models\FormSection;
 use App\Models\Respondent; 
 use App\Models\Response; 
 use App\Models\Assignment;
+use App\Models\FormAssignment;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\User; 
 class Form extends Model
@@ -48,4 +49,7 @@ class Form extends Model
         return $this->belongsTo(User::class,'published_by','id');
     }
 
+    public function form_assignmets(){
+        return $this->hasMany(FormAssignment::class,'form_id','id');
+    }
 }

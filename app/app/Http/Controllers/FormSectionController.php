@@ -45,10 +45,6 @@ class FormSectionController extends Controller
     {
         $collection = json_decode($request->collection, true);
 
-        // return $collection = collect($collection)->filter(function ($item) {
-        //     return $item['id'] === 1;
-        //  })->first()['text'];
-
         foreach ($collection as $key=>$section) {
             $formSection = new FormSection;
             $formSection->form_id = $section['form_id'];
@@ -63,7 +59,7 @@ class FormSectionController extends Controller
             $formSection->image_position = $section['image_position'];
             $formSection->prerequisite = empty($section['prerequisites']) ? false : true;
             if($formSection->save()){
-                if($formSection->prerequisite){
+                if($section['prerequisites']){
                     foreach ($section['prerequisites'] as $question_prerequisite) {
 
                         $text = collect($collection)->filter(function ($item) use($question_prerequisite) {
@@ -111,7 +107,7 @@ class FormSectionController extends Controller
             }
         }
 
-        $status_id = Status::where('name',$request->status === 'true' ? 'Publish' : 'Draft')->first()['id'];
+        $status_id = Status::where('name','Draft')->first()['id'];
         $form = Form::where('id',$collection[0]['form_id'])->first();
         if($request->status === 'true'){
             $form->published_by = Auth::user()->id;
@@ -182,23 +178,25 @@ class FormSectionController extends Controller
             $formSection->prerequisite = empty($section['prerequisites']) ? false : true;
             $formSection->deleted_at = null;
             if($formSection->save()){
-                
-                if($formSection->prerequisite){
+                if(!empty($section['prerequisites']) ){
                     foreach ($section['prerequisites'] as $question_prerequisite) {
-                        $formSection_id = FormSection::where([
-                            ['form_id',$section['form_id']],
-                            ['text',$section['section_id']]
-                        ])->withTrashed()->first();
+                      $prerequisite = Prerequisite::where('id',$question_prerequisite['prerequisite_id'])->first();
+                      $section_id = $question_prerequisite['prerequisite_question'];
+                       if(empty($prerequisite)){
+                            $prerequisite = new Prerequisite;
+                            $text = collect($collection)->filter(function ($item) use($question_prerequisite) {
+                                return $item['id'] === $question_prerequisite['prerequisite_question'];
+                            })->first()['text'];
 
-                       $prerequisite = new Prerequisite;
+                            $section_id = FormSection::where([['text',$text],['form_id', $section['form_id']]])->first()['id'];
+                       }
+                       
                        $prerequisite->prerequisite_form_id = $question_prerequisite['prerequisite_form'];
-                       $prerequisite->prerequisite_section_id = $question_prerequisite['prerequisite_question'];
+                       $prerequisite->prerequisite_section_id = $section_id;
                        $prerequisite->form_id = $section['form_id'];
                        $prerequisite->section_id = $formSection->id;
                        $prerequisite->answer = $question_prerequisite['prerequisite_option'];
                        $prerequisite->save();
-                       $formsection->prerequisite = true;
-                        $formsection->save();
                     }
                 }
 
@@ -219,7 +217,7 @@ class FormSectionController extends Controller
                         $option->save();
                     }
                 }
-
+                
                 if(!empty($section['images'])){
                     if($request->question_ids){
                         foreach ($request->question_ids as $key => $section_image) {
@@ -244,6 +242,8 @@ class FormSectionController extends Controller
 
                             if(!empty($image)){
                                 $image->deleted_at = null;
+                                $image->width = $section_image['width'];
+                                $image->height = $section_image['height'];
                                 $image->save();
                             }
                         }
@@ -253,7 +253,7 @@ class FormSectionController extends Controller
             }
         }
 
-        $status_id = Status::where('name',$request->status === 'true' ? 'Publish' : 'Draft')->first()['id'];
+        $status_id = Status::where('name','Draft')->first()['id'];
         $form = Form::where('id',$collection[0]['form_id'])->first();
         $form->status_id = $status_id;
         if($form->save()){

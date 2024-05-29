@@ -31,4 +31,8 @@ class FormSection extends Model
     public function prerequisites(){
         return $this->hasMany(Prerequisite::class, 'prerequisite_section_id', 'id');
     }
+
+    public function section_prerequisites(){
+        return $this->hasMany(Prerequisite::class, 'section_id', 'id');
+    }
 }

@@ -75,7 +75,7 @@ class ResponseController extends Controller
             return view('pages.survey.surveyform',compact('userform','user_id'));
         }
         else{
-            return redirect('https://stackoverflow.com/'); 
+            return redirect('http://10.97.70.47:8085/'); 
         }
     }
 

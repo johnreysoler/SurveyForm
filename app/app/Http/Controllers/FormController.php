@@ -11,11 +11,15 @@ use App\Models\Company;
 use App\Models\Cluster;
 use App\Models\Employee;
 use App\Models\Respondent;
+use App\Models\FormAssignment;
 use App\Http\Requests\StoreFormRequest;
 use App\Http\Requests\UpdateFormRequest;
 use Illuminate\Http\Request;
+use App\Models\Head;
+use App\Models\AssignHead;
 use Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 class FormController extends Controller
 {
     /**
@@ -53,19 +57,27 @@ class FormController extends Controller
             'start_date' => 'required',
             'end_date' => 'required',
             'assign_by' => 'required',
+            'respondents'=> Rule::requiredIf($request->assign_by !== 1),//'required_if:assign_by,===,1' ,
         ]);
 
         $assignment = Assignment::where('id',$request->assign_by)->first();
+        
         $employees;
-        if(empty($assignment->employee_function_name)){
-            $employees = Employee::where([['date_resigned',null],[$assignment->reference_column,array($request->surveyFormsRespondents)]])->get();
+        if($request->assign_by === 1){
+            $employees = Employee::where('date_resigned',null)->get();
         }
         else{
-            $employees = Employee::with([$assignment->employee_function_name => function($q) use($request,$assignment){
-                $q->wherein($assignment->reference_column,array($request->surveyFormsRespondents));
-            }])->where('date_resigned',null)->get();
+        if(empty($assignment->employee_function_name)){
+            $employees = Employee::where('date_resigned',null)->whereIn($assignment->reference_column,$request->respondents)->get();
         }
-
+        else{
+            $employees = Employee::with([$assignment->employee_function_name=>function($q) use($request,$assignment){
+                $q->whereIn($assignment->reference_column,$request->respondents);
+            }])->where('date_resigned',null)->whereHas($assignment->employee_function_name,function($q) use($request,$assignment){
+                $q->whereIn($assignment->reference_column,$request->respondents);
+            })->get();
+            }
+        }
 
         $status_id = Status::where('name','Created')->first()['id'];
         $form = new Form;
@@ -89,10 +101,15 @@ class FormController extends Controller
             foreach($employees as $key=>$employee){   
                 $repondent = new Respondent;
                 $repondent->form_id = $form->id;
-                $repondent->user_id = $employee->id;       
-                    if(!empty($employees[$key][$assignment->employee_function_name]) || empty($assignment->employee_function_name)){
-                        $repondent->save();
-                    }
+                $repondent->user_id = $employee->user_id;  
+                $repondent->save();   
+           }
+
+           foreach ($request->respondents as $key => $assignment_id) {
+                $formAssignment = new FormAssignment;
+                $formAssignment->form_id =  $form->id;
+                $formAssignment->respondent_id = $assignment_id;
+                $formAssignment->save();
            }
         }
 
@@ -108,14 +125,27 @@ class FormController extends Controller
      */
     public function show(Request $request)
     {
+        $users = [Auth::user()->id];
+        $isBUHead = false;
+        $employees = AssignHead::where([
+            ['head_id',Head::where('name','BU Head')->first()['id']],
+            ['employee_head_id',$users]
+        ])->get();
+
+        if($employees->isNotEmpty()){
+            $users = $employees->pluck('employee_id');
+            $isBUHead = true;
+        }
+
         return ['surveyForms'=>Form::with(['prerequisites'=> function($query) use($request){
             $query->where('section_id',null);
-        },'statuses','assignments','created_bys','published_bys'
+        },'statuses','assignments','created_bys','published_bys','form_assignmets'
         ])->when($request->search, function ($q) use ($request) {
             $q->orWhere('title', 'LIKE', '%' . $request->search . '%')
               ->orWhere('description', 'LIKE', '%' . $request->search . '%');
-        })->get(),
-    'assignments'=>Assignment::all(),];
+        })->whereIn('created_by',$users)->get(),
+    'assignments'=>Assignment::all(),
+    'isBUHead'=>$isBUHead];
     }
 
     /**
@@ -138,14 +168,37 @@ class FormController extends Controller
      */
     public function update(Request $request, Form $form)
     {
-        
         $request->validate([
             'title' => 'required',
             'start_date' => 'required',
             'end_date' => 'required',
             'assign_by' => 'required',
+            'respondents'=> Rule::requiredIf($request->assign_by !== 1)
         ]);
         
+        $assignment = Assignment::where('id',$request->assign_by)->first();
+        FormAssignment::where('form_id',$request->form_id)->delete();
+        Respondent::where('form_id',$request->form_id)->delete();
+
+        $assignment = Assignment::where('id',$request->assign_by)->first();
+        
+        $employees;
+        if($request->assign_by === 1){
+            $employees = Employee::where('date_resigned',null)->get();
+        }
+        else{
+            if(empty($assignment->employee_function_name)){
+                $employees = Employee::where('date_resigned',null)->whereIn($assignment->reference_column,$request->respondents)->get();
+            }
+            else{
+                $employees = Employee::with([$assignment->employee_function_name=>function($q) use($request,$assignment){
+                    $q->whereIn($assignment->reference_column,$request->respondents);
+                }])->where('date_resigned',null)->whereHas($assignment->employee_function_name,function($q) use($request,$assignment){
+                    $q->whereIn($assignment->reference_column,$request->respondents);
+                })->get();
+            }
+        }
+
         $form = Form::where('id',$request->form_id)->first();
         $form->title = $request->title;
         $form->description = $request->description;
@@ -165,6 +218,29 @@ class FormController extends Controller
                     $prerequisite->form_id = $form->id;
                     $prerequisite->save();
                 }
+
+                foreach ($request->respondents as $key => $repondent_id) {
+                    $formAssignment = FormAssignment::where([['form_id',$request->form_id],['respondent_id',$repondent_id]])->withTrashed()->first();
+                    if(empty($formAssignment)){
+                        $formAssignment = new FormAssignment;
+                    }
+
+                    $formAssignment->form_id =  $form->id;
+                    $formAssignment->respondent_id = $repondent_id;
+                    $formAssignment->deleted_at = null;
+                    $formAssignment->save();
+               }
+
+               foreach($employees as $key=>$employee){   
+                $repondent = Respondent::where([['form_id',$request->form_id],['user_id',$employee->user_id]])->withTrashed()->first();
+                    if(empty($repondent)){
+                        $repondent = new Respondent;
+                    }
+                $repondent->form_id = $form->id;
+                $repondent->user_id = $employee->user_id;  
+                $repondent->deleted_at = null;
+                $repondent->save();   
+           }
                 
         }
         return ['redirect'=>route('survey-form-layout'),'id'=>$form->id];
@@ -186,7 +262,26 @@ class FormController extends Controller
         // 'sections','sections.options','sections.options','sections.optionTypes',
         // 'sections.images','sections.prerequisites')->where('id',$form_id)->first();
 
-        return Form::with('sections','sections.options','sections.options','sections.optionTypes','sections.images','sections.prerequisites')->where('id',$form_id)->first();
+        return Form::with('sections','sections.options','sections.options','sections.optionTypes',
+        'sections.images','sections.prerequisites','sections.section_prerequisites')->where('id',$form_id)->first();
+    }
+    public function publishForm(Request $request){
+        $status_id = Status::where('name','Publish')->first()['id'];
+        $form = Form::where('id',$request->form_id)->first();
+        $form->status_id = $status_id;
+        $form->published_by = Auth::user()->id;
+        $form->save();
+
     }
 
+    public function fetchViewForm($form_id){
+        return ['redirect'=>route('view-survey-form'),'id'=>$form_id];
+    }
+
+    public function viewForm(Request $request){
+        $form = Form::with('sections','sections.options','sections.options','sections.optionTypes',
+        'sections.images','sections.prerequisites','sections.section_prerequisites')->where('id',$request->id)->first();
+
+        return view('pages.survey.surveyview',compact('form'));
+    }
 }
