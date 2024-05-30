@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::get('/surveyform/{user_id}', [App\Http\Controllers\ResponseController::class, 'index']);
+Route::get('/survey-form/{user_id}', [App\Http\Controllers\ResponseController::class, 'validateUserSurveyForm']);
 // Route::get('/assignment', [App\Http\Controllers\AssignmentController::class, 'index']);
 
 Auth::routes();

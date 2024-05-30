@@ -341,4 +341,5 @@ class FormController extends Controller
 
       return Excel::download(new ExportSurvey($form_id, $responses), $form_title.'.xlsx');
     }
+
 }
