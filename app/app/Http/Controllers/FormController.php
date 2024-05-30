@@ -20,6 +20,11 @@ use App\Models\AssignHead;
 use Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use App\Models\FormSection;
+use App\Models\Response;
+use App\Exports\ExportSurvey;
+use Maatwebsite\Excel\Facades\Excel;
+
 class FormController extends Controller
 {
     /**
@@ -283,5 +288,57 @@ class FormController extends Controller
         'sections.images','sections.prerequisites','sections.section_prerequisites')->where('id',$request->id)->first();
 
         return view('pages.survey.surveyview',compact('form'));
+    }
+
+    public function exportToExcel($form_id){
+        $form_title = Form::where('id',$form_id)->first()['title'];
+        $responses = [];
+        $users = Response::with('employee.EmployeeCompany','employee.EmployeeDepartment')
+        ->where('form_id',$form_id)->get()->unique('user_id');
+
+
+        foreach ($users as $key => $user) {
+            $responses[] = [
+            'user_id' => $user->user_id,
+            'employeenumber' => $user->employee->employee_number,
+            'name'=> $user->employee ? $user->employee->first_name . ' ' . $user->employee->last_name  : '',
+            'cluster'=> $user->employee ? $user->employee->new_cluster : '',
+            'company'=> $user->employee->EmployeeCompany ? $user->employee->EmployeeCompany[0]->name : '',
+            'business_unit'=> $user->employee ? $user->employee->cluster: '',
+            'department'=> $user->employee ? $user->employee->EmployeeDepartment[0]->name: '',
+            'position' => $user->employee->position ? $user->employee->position : '',
+            'area' => $user->employee->area ? $user->employee->area : '',
+            'location' => $user->employee->location ? $user->employee->location : '',
+            'date_hired' => $user->employee->date_hired ? $user->employee->date_hired : '',
+            'date_answered' => $user->created_at ?  date("Y-m-d", strtotime($user->created_at )) : '',
+            'time_answered' => $user->created_at ? date("h:i:s A", strtotime($user->created_at )): ''
+            ];
+        }
+        
+        $export = [];
+        $formQuestions = FormSection::where('form_id',$form_id)->get();
+        foreach ($formQuestions as $key=>$formQuestion) {
+            foreach ($users as $user) {
+                $user_response = Response::where([
+                    ['form_id', $form_id],
+                    ['question_id', $formQuestion->id],
+                    ['user_id', $user->user_id]
+                ])->pluck('response');
+
+            
+                if($user_response->isNotEmpty()){
+                $user_response = json_encode($user_response);
+                }
+                else{
+                $user_response = "";
+                }
+
+                $user_response =  preg_replace('/[^A-Za-z0-9\-,\{}:]/','',$user_response);
+                $keyArray = array_search($user->user_id, array_column($responses, 'user_id'));
+                $responses[$keyArray]['Q'.($key+1)] = $user_response;
+            }
+        } 
+
+      return Excel::download(new ExportSurvey($form_id, $responses), $form_title.'.xlsx');
     }
 }

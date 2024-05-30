@@ -176,6 +176,10 @@ function resetFields() {
     form.prerequisiteOption = []
     form.modalTitle = 'Create new Survey Form'
 }
+
+function exportToExcel(form_id){
+    window.open(window.location.origin+'/export/' + form_id) 
+}
 onMounted(() => {
     fetchData()
     form.modalClose = document.getElementById('btnCloseIndexModal');
@@ -243,6 +247,7 @@ onMounted(() => {
                                                     v-if="survey.statuses.allow_update && form.isBUHead"
                                                     @click="publishSurveyForm(survey)">Publish</a></li>
                                             <li><a class="dropdown-item" href="#" @click="viewSurveyForm(survey)">View</a></li>
+                                            <li><a class="dropdown-item" v-if="!survey.statuses.allow_update" href="#" @click="exportToExcel(survey.id)">Export to excel</a></li>
                                         </ul>
                                     </div>
                                 </td>

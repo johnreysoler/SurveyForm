@@ -11,6 +11,6 @@ class Response extends Model
 
     public function employee()
     {
-        return $this->hasOne(Employee::class,'user_id','user_id')->select('id','user_id','id_number','employee_number','first_name','last_name','new_cluster');
+        return $this->hasOne(Employee::class,'user_id','user_id')->select('id','user_id','id_number','employee_number','first_name','last_name','new_cluster','cluster','position','location','area','date_hired');
     }
 }

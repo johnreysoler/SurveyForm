@@ -37,3 +37,5 @@ Route::patch('/form-update', [App\Http\Controllers\FormController::class, 'updat
 Route::post('/form/user/response',[App\Http\Controllers\ResponseController::class, 'store']);
 
 Route::patch('/publish',[App\Http\Controllers\FormController::class, 'publishForm']);
+
+Route::get('/export/{form_id}',[App\Http\Controllers\FormController::class, 'exportToExcel']);
