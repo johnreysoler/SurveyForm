@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted } from 'vue';
-import { imageUrl, setImageSize } from '../../composables/useSurveyForm.js'
+import { imageUrl, setImageSize,publicPath } from '../../composables/useSurveyForm.js'
 const props = defineProps({
     form: { Type: Array }
 })
@@ -19,7 +19,7 @@ const props = defineProps({
                             <div v-if="content.images !== null" class="mt-2"
                                 :class="[content.is_question ? 'mt-2 mx-3' : null, 'd-flex justify-content-' + content.image_position]"
                                 style="flex-flow: wrap;">
-                                <img v-for="(image, index) in content.images" :src="imageUrl(image.url)"
+                                <img v-for="(image, index) in content.images" :src="imageUrl(image.path)"
                                     :style="{ height: setImageSize(image.height), width: setImageSize(image.width) }"
                                     class="m-1" />
                             </div>
